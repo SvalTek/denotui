@@ -1,0 +1,29 @@
+{
+  "name": "@denotui/deno-tui",
+  "version": "0.1.0",
+  "exports": "./mod.ts",
+  "workspace": ["./packages/*", "./examples/*"],
+  "tasks": {
+    "check": "deno check . tests",
+    "test": "deno test -RE=NODE_ENV",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "build:examples": "deno run -RWN packages/compiler/cli.ts build examples"
+  },
+  "exclude": ["local"],
+  "lint": {},
+  "fmt": {},
+  "test": {
+    "exclude": ["local"]
+  },
+  "imports": {
+    "@astrojs/compiler": "npm:@astrojs/compiler@^4.0.0",
+    "@std/assert": "jsr:@std/assert@^1.0.19",
+    "@std/path": "jsr:@std/path@^1.1.6",
+    "nanostores": "npm:nanostores@^1.5.5",
+    "slice-ansi": "npm:slice-ansi@^9.0.1",
+    "string-width": "npm:string-width@^8.3.0",
+    "wrap-ansi": "npm:wrap-ansi@^10.0.2",
+    "yoga-layout": "npm:yoga-layout@^3.2.1"
+  }
+}

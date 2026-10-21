@@ -1,0 +1,9 @@
+{
+  "name": "@denotui/compiler",
+  "version": "0.1.0",
+  "exports": "./mod.ts",
+  "tasks": {
+    "build": "deno run -RWN cli.ts build",
+    "test": "deno test -RE=NODE_ENV"
+  }
+}

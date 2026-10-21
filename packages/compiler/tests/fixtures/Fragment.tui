@@ -1,0 +1,8 @@
+---
+const label = "hi";
+---
+
+<>
+  <Text>{label}</Text>
+  <Text>plain</Text>
+</>

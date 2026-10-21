@@ -1,0 +1,8 @@
+{
+  "name": "@denotui/example-agent-zoo",
+  "exports": "./main.ts",
+  "publish": false,
+  "tasks": {
+    "start": "deno run -A main.ts"
+  }
+}

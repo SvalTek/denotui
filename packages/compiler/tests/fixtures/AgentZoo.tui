@@ -1,0 +1,18 @@
+---
+import { $agents } from "./stores.ts";
+import type { Agent } from "./stores.ts";
+import AgentRow from "./AgentRow.tui";
+
+const title = "AgentZoo";
+---
+
+<Box direction="column" padding={1}>
+  <Text bold>{title}</Text>
+  <Text dim>{$agents.length} agents</Text>
+
+  <Map for={$agents}>
+    {(agent: Agent) => <AgentRow agent={agent} />}
+  </Map>
+
+  <Text>Press q to quit</Text>
+</Box>
