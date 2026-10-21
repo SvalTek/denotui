@@ -120,11 +120,7 @@ const items = ["a"];
   const { code } = await compile(source, { name: "Nested" });
   assertStringIncludes(
     code,
-    'import { Fragment, component, h } from "@denotui/runtime"',
-  );
-  assertStringIncludes(
-    code,
-    'import { Box, Text } from "@denotui/components"',
+    'import { Box, Fragment, Text, component, h } from "@denotui/deno-tui"',
   );
   assertStringIncludes(code, "h(Text,");
 });
@@ -180,7 +176,7 @@ Deno.test("generated code only imports the core components it uses", async () =>
   const { code } = await compile("<Text>hi</Text>", { name: "OnlyText" });
   assertStringIncludes(
     code,
-    'import { Text } from "@denotui/components"',
+    'import { Fragment, Text, component, h } from "@denotui/deno-tui"',
   );
   assert(!code.includes("Box"), "Box should not be imported");
   assert(!code.includes("Map"), "Map should not be imported");
@@ -198,7 +194,7 @@ Deno.test("runtime-only templates still import Fragment", async () => {
   const { code } = await compile("plain text", { name: "Plain" });
   assertStringIncludes(
     code,
-    'import { Fragment, component, h } from "@denotui/runtime"',
+    'import { Fragment, component, h } from "@denotui/deno-tui"',
   );
   assert(!code.includes("@denotui/components"));
 });

@@ -1,9 +1,15 @@
 {
   "name": "@denotui/compiler",
   "version": "0.1.0",
-  "exports": "./mod.ts",
+  "exports": {
+    ".": "./mod.ts",
+    "./cli": "./cli.ts"
+  },
   "tasks": {
-    "build": "deno run -RWN cli.ts build",
+    "build": "deno run -RW cli.ts compile",
     "test": "deno test -RE=NODE_ENV"
+  },
+  "imports": {
+    "@astrojs/compiler": "npm:@astrojs/compiler@^4.0.0"
   }
 }

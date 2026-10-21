@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { component, Fragment, h } from "@denotui/runtime";
 import { Box as CoreBox } from "@denotui/components";
+import { compile } from "@denotui/compiler";
 import type { LayoutBox } from "@denotui/layout";
 import type { Cell } from "@denotui/terminal";
 
@@ -41,5 +42,6 @@ Deno.test("root umbrella re-exports member symbols", async () => {
     style: null,
     continuation: false,
   };
-  assertEquals(typeof root.compile, "function");
+  assertEquals(typeof compile, "function");
+  assertEquals("compile" in root, false, "app barrel excludes the compiler");
 });

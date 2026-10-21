@@ -12,14 +12,14 @@
 import type { AttrIR, ComponentIRRoot, FragmentIR, NodeIR } from "./ir.ts";
 import { rewriteReactive } from "./scan.ts";
 
-/** Runtime symbols always imported from `@denotui/runtime` in generated code.
+/** Runtime symbols always imported from the app barrel in generated code.
  *  `Fragment` is always needed because the template root is a fragment. */
 const RUNTIME_ALWAYS = ["component", "Fragment", "h"] as const;
 
 /**
  * Language-level core vocabulary: these names are usable in a template without
  * a frontmatter import. This is deliberately a small, fixed list — it is not the
- * component catalog. Every other component (including future `@denotui/components`
+ * component catalog. Every other component (including future app-barrel
  * additions) is imported in frontmatter like application components.
  */
 export const CORE_COMPONENTS: readonly string[] = [
@@ -52,9 +52,9 @@ export const CORE_COMPONENTS: readonly string[] = [
 ];
 
 export interface CodegenOptions {
-  /** Import specifier for the runtime primitives (default `@denotui/runtime`). */
+  /** Import specifier for the app barrel (default `@denotui/deno-tui`). */
   runtimeSpecifier?: string;
-  /** Import specifier for the bundled components (default `@denotui/components`). */
+  /** Import specifier for the bundled components (defaults to the app barrel). */
   componentsSpecifier?: string;
 }
 
@@ -62,21 +62,29 @@ export function generate(
   ir: ComponentIRRoot,
   options: CodegenOptions = {},
 ): string {
-  const runtime = options.runtimeSpecifier ?? "@denotui/runtime";
-  const components = options.componentsSpecifier ?? "@denotui/components";
+  const runtime = options.runtimeSpecifier ?? "@denotui/deno-tui";
+  const components = options.componentsSpecifier ?? runtime;
   const usedComponents = ir.builtins.components.filter((name) =>
     CORE_COMPONENTS.includes(name)
   );
   const imports = ir.frontmatter.imports.map(rewriteTuiSpecifier);
 
-  const runtimeImport = `import { ${
-    [...RUNTIME_ALWAYS].sort().join(", ")
-  } } from ${JSON.stringify(runtime)};`;
-  const componentsImport = usedComponents.length
-    ? `import { ${usedComponents.join(", ")} } from ${
-      JSON.stringify(components)
-    };`
-    : null;
+  let runtimeImport: string;
+  let componentsImport: string | null = null;
+  if (runtime === components) {
+    runtimeImport = `import { ${
+      [...new Set([...RUNTIME_ALWAYS, ...usedComponents])].sort().join(", ")
+    } } from ${JSON.stringify(runtime)};`;
+  } else {
+    runtimeImport = `import { ${[...RUNTIME_ALWAYS].sort().join(", ")} } from ${
+      JSON.stringify(runtime)
+    };`;
+    componentsImport = usedComponents.length
+      ? `import { ${usedComponents.join(", ")} } from ${
+        JSON.stringify(components)
+      };`
+      : null;
+  }
 
   const template = emitFragment(ir.root);
   const body = ir.frontmatter.body.trim();
@@ -86,7 +94,7 @@ export function generate(
     "// GENERATED FILE — do not edit. Source of truth is the adjacent .tui file.",
   );
   lines.push(
-    "// Rebuild with: deno task build:examples  (or the deno-tui build CLI).",
+    "// Rebuild with: denotui compile  (or: deno task build:examples).",
   );
   lines.push(runtimeImport);
   if (componentsImport) lines.push(componentsImport);

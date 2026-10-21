@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "denotui:build": "deno run -RW @denotui/compiler/cli compile .",
+    "start": "deno task denotui:build && deno run -A main.ts"
+  },
+  "imports": {
+    "@denotui/deno-tui": "jsr:@denotui/deno-tui@^0.1.0",
+    "@denotui/compiler": "jsr:@denotui/compiler@^0.1.0"
+  }
+}

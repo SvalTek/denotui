@@ -28,22 +28,72 @@ exact node shapes this relies on.
 | `build({ dir, check })`      | discover and compile every `*.tui` under a directory |
 
 `compile`/`compileFile` accept `runtimeSpecifier` and `componentsSpecifier` to
-change the import specifiers used in generated modules.
+change the import specifiers used in generated modules. Both default to the app
+barrel `@denotui/deno-tui`; generated modules import the runtime primitives and
+core components together from it. Set them to granular packages only when an app
+intentionally uses that layout.
 
 `compile`/`build`/`parseToIR` are async because the underlying parser is WASM.
 
 ## CLI
 
 ```
-deno run -RWN packages/compiler/cli.ts build [dir] [--check]
+denotui compile [dir] [--check]
 ```
+
+`build` is accepted as an alias. The command:
 
 - Defaults to the current directory; recurses, skipping `node_modules` and
   dot-directories.
 - Idempotent: writes only when the generated code differs from what is on disk,
   so file mtimes stay stable for watch tooling.
 - `--check` reports what would change without writing.
+- Needs read + write permissions (`-R -W`), no network at run time once the
+  package graph is cached.
 - `deno task build:examples` runs it over `examples/`.
+
+### Installing the CLI
+
+For an application project, prefer the installer (see
+[`installer.md`](./installer.md)): it adds the dependencies and a
+`denotui:build` task without a global command.
+
+`deno add jsr:@denotui/compiler` adds the **library** to a project; it does not
+create a command. Install the CLI globally from the published package:
+
+```sh
+# Thin Deno shim (recommended while iterating)
+deno install -g -A -n denotui jsr:@denotui/compiler/cli
+
+# Or a standalone binary that does not need Deno at run time
+deno install -g --compile -A -n denotui jsr:@denotui/compiler/cli
+```
+
+From a local checkout (before the first publish), include the package config:
+Deno copies the installed shim into its own directory and otherwise ignores the
+workspace import map.
+
+```sh
+deno install -g -A -n denotui \
+  --config packages/compiler/deno.json packages/compiler/cli.ts
+```
+
+Or run it without installing:
+
+```sh
+deno run -A jsr:@denotui/compiler/cli compile .
+```
+
+Notes:
+
+- `deno install` without `--global` only installs project dependencies; it does
+  not put a command on `PATH`.
+- The JSR specifier requires the package to be published first. A raw GitHub URL
+  is not a substitute here: the CLI's bare imports (`@astrojs/compiler`) resolve
+  through the package's `deno.json`, which a remote script does not load.
+- The compiler is a build tool: it reads and writes the project and loads its
+  package graph, so `-A` is a sensible installation permission. If you prefer to
+  scope it, `--allow-read --allow-write` covers normal use.
 
 ## `deno compile` story
 

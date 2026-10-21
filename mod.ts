@@ -1,12 +1,12 @@
 /**
  * deno-tui — Astro-style TUI component framework for Deno.
  *
- * Umbrella entry point: re-exports every workspace package so consumers can
- * import the whole library from one specifier, while `@denotui/compiler`,
- * `@denotui/components`, `@denotui/runtime`, `@denotui/layout` and
- * `@denotui/terminal` remain importable individually.
+ * Application entry point: re-exports the runtime, components, layout and
+ * terminal packages so app code and generated `.tui.ts` modules can use one
+ * specifier. The compiler is a build tool and remains in `@denotui/compiler`
+ * so importing the app barrel never pulls the Astro/WASM compiler.
  */
-export * from "./packages/compiler/mod.ts";
+
 export * from "./packages/components/mod.ts";
 export * from "./packages/runtime/mod.ts";
 export * from "./packages/layout/mod.ts";

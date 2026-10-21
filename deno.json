@@ -31,6 +31,7 @@
     "nanostores": "npm:nanostores@^1.5.5",
     "slice-ansi": "npm:slice-ansi@^9.0.1",
     "string-width": "npm:string-width@^8.3.0",
+    "typescript": "npm:typescript@^7.0.2",
     "wrap-ansi": "npm:wrap-ansi@^10.0.2",
     "yoga-layout": "npm:yoga-layout@^3.2.1"
   }

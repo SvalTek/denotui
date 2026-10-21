@@ -1,5 +1,5 @@
 import AgentZoo from "./AgentZoo.tui.ts";
-import { createApp } from "@denotui/runtime";
+import { createApp } from "@denotui/deno-tui";
 import { $agents, $filter, $selected, filteredAgents, tick } from "./stores.ts";
 
 type IntervalHandle = Parameters<typeof clearInterval>[0];

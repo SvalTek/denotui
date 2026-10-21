@@ -1,0 +1,4 @@
+<Box direction="column" padding={1} gap={1}>
+  <Text bold fg="brightCyan">Hello denotui</Text>
+  <Text dim>Press q to quit</Text>
+</Box>

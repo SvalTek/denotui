@@ -1,0 +1,11 @@
+{
+  "name": "@denotui/installer",
+  "version": "0.1.0",
+  "exports": "./main.ts",
+  "imports": {
+    "jsonc-parser": "npm:jsonc-parser@^3.3.1"
+  },
+  "tasks": {
+    "test": "deno test -RE=NODE_ENV"
+  }
+}

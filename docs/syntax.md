@@ -43,14 +43,14 @@ const title = "AgentZoo";
 
 - Tags with an **uppercase** first letter are components (`Box`, `Text`,
   `AgentRow`). Tags with a **lowercase** first letter are elements.
-- The compiler auto-imports the bundled core vocabulary from
-  `@denotui/components`: `Alert`, `Badge`, `Box`, `Button`, `Center`,
-  `Checkbox`, `Column`, `Divider`, `HelpBar`, `KeyValue`, `List`, `Map`,
-  `Panel`, `ProgressBar`, `Row`, `ScrollView`, `Select`, `Show`, `Spacer`,
-  `Spinner`, `StatusBar`, `Table`, `Tabs`, `Text`, `TextInput`, `Toggle`. These
-  names are reserved for the framework; any other component (including
-  `Separator` and your own) is imported in frontmatter (Astro convention — no
-  file resolution magic).
+- The compiler auto-imports the bundled core vocabulary from the app barrel
+  `@denotui/deno-tui`: `Alert`, `Badge`, `Box`, `Button`, `Center`, `Checkbox`,
+  `Column`, `Divider`, `HelpBar`, `KeyValue`, `List`, `Map`, `Panel`,
+  `ProgressBar`, `Row`, `ScrollView`, `Select`, `Show`, `Spacer`, `Spinner`,
+  `StatusBar`, `Table`, `Tabs`, `Text`, `TextInput`, `Toggle`. These names are
+  reserved for the framework; any other component (including `Separator` and
+  your own) is imported in frontmatter (Astro convention — no file resolution
+  magic).
 - `{...}` in text, attribute values, or as an element child is a JavaScript
   expression. Every expression is routed through `ctx.expr()` by the compiler
   (see [`codegen.md`](./codegen.md)).

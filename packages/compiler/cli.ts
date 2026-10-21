@@ -1,24 +1,27 @@
 /**
- * `deno-tui build` — compile every `.tui` file under a directory to its
- * generated `.tui.ts` sibling. Intended to run before launching an app and, for
- * `deno compile`, before bundling (generated output is what gets bundled).
+ * `denotui compile` (alias: `build`) — compile every `.tui` file under a
+ * directory to its generated `.tui.ts` sibling. Intended to run before launching
+ * an app and, for `deno compile`, before bundling (generated output is what gets
+ * bundled).
  *
  * Usage:
- *   deno run -RWN packages/compiler/cli.ts build [dir] [--check]
+ *   deno run -RW packages/compiler/cli.ts compile [dir] [--check]
  */
 import { build } from "./mod.ts";
 
 function usage(): never {
-  console.error("usage: deno-tui build [dir] [--check]");
+  console.error("usage: denotui compile [dir] [--check]");
   console.error("");
   console.error("  dir       directory to scan (default: current directory)");
   console.error("  --check   report what would change without writing");
+  console.error("");
+  console.error("`build` is accepted as an alias for `compile`.");
   Deno.exit(2);
 }
 
 async function main(argv: string[]): Promise<void> {
   const [command, ...rest] = argv;
-  if (command !== "build") usage();
+  if (command !== "compile" && command !== "build") usage();
 
   const check = rest.includes("--check");
   const dir = rest.find((arg) => !arg.startsWith("-")) ?? ".";

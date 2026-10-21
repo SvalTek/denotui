@@ -5,7 +5,7 @@ multi-line for readability; real output is denser):
 
 ```ts
 // GENERATED FILE — do not edit. Source of truth is the adjacent .tui file.
-import { Box, component, Fragment, h, Map, Text } from "@denotui/runtime";
+import { Box, component, Fragment, h, Map, Text } from "@denotui/deno-tui";
 import { $agents } from "./stores.ts";
 import type { Agent } from "./stores.ts";
 import AgentRow from "./AgentRow.tui.ts";
@@ -41,13 +41,13 @@ export default component("AgentZoo", (props, ctx) => {
 4. **Imports are hoisted** to module scope and `.tui` specifiers are rewritten
    to `.tui.ts`.
 5. **Core components are auto-imported.** `component`, `h` and `Fragment` are
-   always imported from `@denotui/runtime` (`Fragment` is the template root).
-   The fixed core vocabulary (26 bundled names, listed in
+   always imported from the app barrel `@denotui/deno-tui` (`Fragment` is the
+   template root). The fixed core vocabulary (26 bundled names, listed in
    [`syntax.md`](./syntax.md#template) and exported as `CORE_COMPONENTS`) is
-   imported from `@denotui/components` when referenced — including inside JSX
-   that appears in an expression, e.g. `{items.map((i) => <Text>{i}</Text>)}`.
-   These names are reserved for the framework; any other component (e.g.
-   `Separator` or application components) is imported in frontmatter.
+   imported from the same barrel when referenced — including inside JSX that
+   appears in an expression, e.g. `{items.map((i) => <Text>{i}</Text>)}`. These
+   names are reserved for the framework; any other component (e.g. `Separator`
+   or application components) is imported in frontmatter.
 6. **String/boolean attribute literals are not wrapped.** Dynamic values are.
    Attribute names that are not valid identifiers (`data-x`) are quoted.
 7. **Output is deterministic.** `generate(ir)` is pure, so `build()` can compare

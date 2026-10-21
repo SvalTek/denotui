@@ -1,0 +1,10 @@
+{
+  "name": "@denotui/create",
+  "version": "0.1.0",
+  "exports": {
+    "./create": "./create.ts"
+  },
+  "tasks": {
+    "test": "deno test -RE=NODE_ENV"
+  }
+}

@@ -11,7 +11,9 @@ Read in this order:
    module.
 3. [`codegen.md`](./codegen.md) — the exact shape of generated code and why.
 4. [`rendering.md`](./rendering.md) — layout, cells, diffing, screen and input.
-5. [`oddities.md`](./oddities.md) — gotchas, intentional workarounds, and the
+5. [`installer.md`](./installer.md) — the consumer installer and starter
+   template.
+6. [`oddities.md`](./oddities.md) — gotchas, intentional workarounds, and the
    upstream behaviour we depend on.
 
 Design-level documents live in `local/` (`PLAN.md`, `ARCHITECTURE.md`) and are
@@ -26,10 +28,14 @@ packages/runtime   @denotui/runtime     component model, vnodes, reactivity, app
 packages/components @denotui/components bundled UI components (Box, Text, Map, …)
 packages/layout    @denotui/layout      Yoga mapping + text measurement
 packages/terminal  @denotui/terminal    cells, paint, input, screen
+packages/installer @denotui/installer   project installer (`deno x`)
+packages/create    @denotui/create      starter template (`deno create`)
 ```
 
-The workspace root `mod.ts` re-exports all five. Each member is independently
-importable by its `name` (e.g. `import { compile } from "@denotui/compiler";`).
+The workspace root `mod.ts` is the **application barrel**: it re-exports the
+runtime, components, layout and terminal packages. The compiler is deliberately
+outside it (so app imports never pull Astro/WASM) and is imported directly:
+`import { compile } from "@denotui/compiler";`.
 
 ## Common commands
 

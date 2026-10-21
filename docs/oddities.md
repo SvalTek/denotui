@@ -100,8 +100,8 @@ TypeScript parser; the rest of the pipeline (IR → codegen) is unaffected.
 The template root is always lowered to a fragment, so generated code always
 references `Fragment` — including templates with no core components at all. Do
 not "optimize" it back to conditional importing: the runtime import list is
-always `component`, `h`, `Fragment`; core components are a second import from
-`@denotui/components`, filtered from `ComponentIRRoot.builtins`.
+always `component`, `h`, `Fragment`; core components are merged into the same
+import from `@denotui/deno-tui`, filtered from `ComponentIRRoot.builtins`.
 
 ## 11. Expression JSX is invisible to the component walk
 
