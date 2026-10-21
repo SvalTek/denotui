@@ -8,7 +8,11 @@
  */
 import { parse } from "@astrojs/compiler";
 import type { AttrIR, ComponentIRRoot, FrontmatterIR, NodeIR } from "./ir.ts";
-import { findImportSpans, findUntypedArrowParams } from "./scan.ts";
+import {
+  findImportSpans,
+  findUntypedArrowParams,
+  looksLikeJsx,
+} from "./scan.ts";
 
 /** Astro AST node, loosely typed — the compiler's types are not ergonomic. */
 interface AstroNode {
@@ -44,10 +48,32 @@ function baseName(filename: string | undefined): string {
   return stripped.replace(/\.tui$/, "").replace(/[^A-Za-z0-9_$]/g, "_");
 }
 
+/**
+ * Astro silently treats an unterminated `---` block as one giant frontmatter
+ * node (no diagnostic). That would put the template into the factory body and
+ * generate invalid TypeScript, so reject it before parsing.
+ */
+export function assertFrontmatterClosed(
+  source: string,
+  filename?: string,
+): void {
+  const text = source.startsWith("\uFEFF") ? source.slice(1) : source;
+  const lines = text.split(/\r?\n/);
+  if (lines[0]?.trim() !== "---") return;
+  for (let index = 1; index < lines.length; index++) {
+    if (lines[index].trim() === "---") return;
+  }
+  const location = filename === undefined ? "" : `${filename}: `;
+  throw new Error(
+    `${location}unterminated frontmatter: missing closing "---" fence`,
+  );
+}
+
 export async function parseToIR(
   source: string,
   options: ParseOptions = {},
 ): Promise<ParseResult> {
+  assertFrontmatterClosed(source, options.filename);
   const { ast } = await parse(source, { position: false });
   const root = ast as unknown as AstroNode;
   const children = root.children ?? [];
@@ -182,6 +208,7 @@ function lowerAttrs(node: AstroNode, warnings: string[]): AttrIR[] {
     if (attr.kind === "empty") {
       attrs.push({ name: attr.name, value: true });
     } else if (attr.kind === "expression") {
+      assertNoAttributeJsx(attr.value);
       warnUntypedArrows(attr.value, warnings);
       attrs.push({ name: attr.name, value: attr.value });
     } else {
@@ -254,10 +281,22 @@ function emitAttrs(node: AstroNode): string {
   const parts = (node.attributes ?? []).map((a) => {
     const name = propName(a.name);
     if (a.kind === "empty") return `${name}: true`;
-    if (a.kind === "expression") return `${name}: ${a.value}`;
+    if (a.kind === "expression") {
+      assertNoAttributeJsx(a.value);
+      return `${name}: ${a.value}`;
+    }
     return `${name}: ${JSON.stringify(a.value)}`;
   });
   return parts.length ? `{ ${parts.join(", ")} }` : "null";
+}
+
+function assertNoAttributeJsx(source: string): void {
+  if (!looksLikeJsx(source)) return;
+  throw new Error(
+    "denotui: JSX inside an attribute expression is not supported by the " +
+      "parser. Pass a function child instead, e.g. " +
+      "<Select items={items}>{(item: Item) => <Row>{item.name}</Row>}</Select>.",
+  );
 }
 
 function emitChildren(children: AstroNode[], usage: LoweringUsage): string {

@@ -107,7 +107,7 @@ Deno.test("badge, alert, tabs, status and help bars render their content", () =>
   for (
     const expected of [
       "new",
-      "✖ Oops",
+      "x Oops",
       "details",
       "Two",
       "ready",
@@ -129,7 +129,7 @@ Deno.test("List marks the selected row and aligns markers", () => {
   );
   const root = createRoot();
   root.mount(App);
-  assertEquals(textOf(root.document), "  a❯ b  c");
+  assertEquals(textOf(root.document), "  a> b  c");
   root.unmount();
 });
 
@@ -152,6 +152,24 @@ Deno.test("Table pads and aligns cells", () => {
   assert(text.includes("30"));
   assert(text.includes("Bob"));
   assert(text.includes(" 7"), "right-aligned age");
+  root.unmount();
+});
+
+Deno.test("Table and KeyValue measure wide characters in cells", () => {
+  const App = component("App", () => () =>
+    h(Column, null, [
+      h(Table, {
+        columns: [{ key: "name", title: "N" }],
+        rows: [{ name: "世界" }],
+      }, []),
+      h(KeyValue, { items: { "名前": "x", ab: "y" } }, []),
+    ]));
+  const root = createRoot();
+  root.mount(App);
+  const text = textOf(root.document);
+  assert(text.includes("世界"), "wide table cell must not be truncated");
+  assert(text.includes("名前"), "wide key must not be truncated");
+  assert(text.includes("ab  "), "short labels pad to the display width");
   root.unmount();
 });
 
@@ -196,18 +214,21 @@ Deno.test("TextInput edits a controlled value and submits", () => {
 
   const root = createRoot();
   root.mount(Form);
-  root.dispatchKey(key({ name: "h", text: "h" }));
-  root.dispatchKey(key({ name: "i", text: "i" }));
-  root.flush();
-  assertEquals($value.get(), "hi");
-  assertEquals(textOf(root.document).startsWith("hi"), true);
+  // Flush between keystrokes: this is the realistic path where a stale
+  // controlled prop used to clamp the cursor back to zero.
+  for (const letter of ["t", "e", "s", "t"]) {
+    root.dispatchKey(key({ name: letter, text: letter }));
+    root.flush();
+  }
+  assertEquals($value.get(), "test");
+  assertEquals(textOf(root.document).startsWith("test"), true);
 
   root.dispatchKey(key({ name: "backspace" }));
   root.flush();
-  assertEquals($value.get(), "h");
+  assertEquals($value.get(), "tes");
 
   root.dispatchKey(key({ name: "return" }));
-  assertEquals(submitted, ["h"]);
+  assertEquals(submitted, ["tes"]);
   root.unmount();
 });
 
@@ -226,7 +247,7 @@ Deno.test("Select moves with arrows and commits on enter", () => {
   root.mount(App);
   root.dispatchKey(key({ name: "down" }));
   root.flush();
-  assert(textOf(root.document).includes("❯ b"));
+  assert(textOf(root.document).includes("> b"));
 
   root.dispatchKey(key({ name: "return" }));
   assertEquals(changes, [1]);
@@ -302,5 +323,27 @@ Deno.test("ScrollView clips and scrolls its content", () => {
   assertEquals(buffer.cellAt(0, 0).char, "b");
   assertEquals(buffer.cellAt(0, 1).char, "c");
   assertEquals(buffer.cellAt(0, 2).char, " ");
+  root.unmount();
+});
+
+Deno.test("ScrollView does not run away without contentHeight", () => {
+  const App = component(
+    "App",
+    () => () =>
+      h(ScrollView, { height: 2, focusable: true, autoFocus: true }, [
+        h(Text, null, ["a"]),
+        h(Text, null, ["b"]),
+        h(Text, null, ["c"]),
+      ]),
+  );
+  const root = createRoot();
+  root.mount(App);
+  root.dispatchKey(key({ name: "end" }));
+  root.flush();
+
+  const tree = layoutTree(root.document, { width: 10, height: 5 });
+  const buffer = new CellBuffer(10, 5);
+  paintLayout(buffer, tree);
+  assertEquals(buffer.cellAt(0, 0).char, "a");
   root.unmount();
 });

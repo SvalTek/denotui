@@ -35,8 +35,12 @@ minimal ANSI string → Screen.write → stdout
 ```
 
 `createApp()` wires this to `root.onCommit`. Store updates are already coalesced
-by the runtime, so each commit paints at most once. Resize resets both buffers
-and repaints from scratch.
+by the runtime, so each commit paints at most once. Resize forces a full-cell
+repaint in one atomic frame (no clear, no blank interval) and the scheduler
+parks the hidden cursor at home after every frame, so the terminal cannot scroll
+to a bottom-row cursor while the window is dragged. A fatal error in a scheduled
+frame goes through `root.onError`; the app stops the session (raw mode, cursor,
+alternate screen) before rethrowing.
 
 Keyboard input follows a separate path: terminal bytes → Node `readline` →
 `KeyEvent` → `root.dispatchKey` (focused handlers, global handlers, Tab
@@ -61,8 +65,12 @@ traversal) → `createApp({ onKey })` for keys nobody consumed.
   is an error. Bare text directly under a `Box` becomes an implicit unstyled
   text run.
 - Text style: `fg`, `bg` (named ANSI, 0-255 palette, `#rgb`/`#rrggbb`), `bold`,
-  `dim`, `italic`, `underline`, `inverse`, `wrap` (default true). Styles do not
-  inherit through boxes in v1.
+  `dim`, `italic`, `underline`, `inverse`, `wrap` (default true).
+- **Backgrounds inherit**: a text run or border cell with no `bg` takes the
+  nearest ancestor box background. This keeps surfaces (status bars, panels, the
+  root) contiguous; without it, text cells would punch terminal-default holes
+  through a painted surface. Explicit `bg` still wins. Foreground and attributes
+  do not inherit.
 - Yoga measure modes are respected: `Exactly` fixes the size, `AtMost` clamps
   content, `Undefined` uses content size.
 
@@ -100,12 +108,14 @@ until all bytes are written; frames are built as one string before writing.
 
 ## Screen lifecycle
 
-- `Screen.start()` enters the alternate screen, clears it, hides the cursor.
+- `Screen.start()` resets SGR state, enters the alternate screen, clears it,
+  hides the cursor and disables autowrap (DECAWM). With autowrap off, writing
+  the bottom-right cell cannot scroll the screen — the old “VHS roll” on resize.
 - `Screen.stop()` resets attributes, shows the cursor and leaves the alternate
   screen. Call it in `finally`/on quit; `createApp.stop()` does this.
-- Size comes from `Deno.consoleSize()`, polled every 200 ms (SIGWINCH is not
-  available on Windows). Listeners fire only when the size changes. A missing
-  TTY falls back to 80×24.
+- Size comes from `Deno.consoleSize()`, polled every 50 ms (SIGWINCH is not
+  available on Windows; a short poll keeps resize lag imperceptible). Listeners
+  fire only when the size changes. A missing TTY falls back to 80×24.
 - Colors assume a modern VT terminal. Legacy Windows conhost is out of scope;
   Windows Terminal is the target.
 
@@ -159,5 +169,6 @@ handles arrows/page keys when `focusable`.
 - Text is plain; ANSI in user text is not parsed. OSC-8 hyperlinks are not
   represented in the cell model.
 - No mouse or bracketed paste.
-- Style inheritance through boxes is deferred.
+- Foreground/attribute inheritance through boxes is deferred (backgrounds do
+  inherit).
 - Layout has no cache: the Yoga tree is rebuilt per commit.

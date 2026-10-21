@@ -120,13 +120,3 @@ export function padStart(text: string, width: number): string {
   const padding = width - stringWidth(text);
   return padding > 0 ? " ".repeat(padding) + text : text;
 }
-
-/** Call a render-function child, if one was supplied. */
-export function renderChild(
-  props: Record<string, unknown>,
-): ((...args: never[]) => unknown) | null {
-  const render = props.render;
-  return typeof render === "function"
-    ? render as (...args: never[]) => unknown
-    : null;
-}

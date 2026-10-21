@@ -363,32 +363,78 @@ const REACTIVE_IDENTIFIER = /^\$[A-Za-z_$][A-Za-z0-9_$]*$/;
 export function rewriteReactive(source: string): string {
   const tokens = tokenize(source);
   const parts: string[] = [];
+  const braceStack: Array<"object" | "block"> = [];
   let cursor = 0;
+
+  const previousSignificantToken = (index: number): Token | null => {
+    for (let i = index - 1; i >= 0; i--) {
+      if (tokens[i].kind !== "comment") return tokens[i];
+    }
+    return null;
+  };
+
+  const isObjectBrace = (previous: Token | null): boolean => {
+    if (!previous) return true;
+    if (previous.kind === "ident") {
+      return previous.text === "return" || previous.text === "yield";
+    }
+    if (previous.kind !== "punct") return false;
+    return [
+      "{",
+      ",",
+      "(",
+      "[",
+      ":",
+      "=",
+      "?",
+      "||",
+      "&&",
+      "??",
+      "!",
+    ].includes(previous.text);
+  };
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
+    if (token.kind === "punct") {
+      if (token.text === "{") {
+        braceStack.push(
+          isObjectBrace(previousSignificantToken(i)) ? "object" : "block",
+        );
+      } else if (token.text === "${") {
+        braceStack.push("block");
+      } else if (token.text === "}") {
+        braceStack.pop();
+      }
+      continue;
+    }
     if (token.kind !== "ident" || !REACTIVE_IDENTIFIER.test(token.text)) {
       continue;
     }
+
     const previous = previousSignificant(tokens, i);
     if (previous && (previous.text === "." || previous.text === "?.")) {
       continue;
     }
     const next = nextSignificant(tokens, i);
-    // Object literal key: `{ $x: ... }` — not a value read.
-    if (
-      next?.text === ":" &&
-      (previous === null || previous.text === "{" || previous.text === ",")
-    ) {
-      continue;
+    const inObject = braceStack[braceStack.length - 1] === "object";
+    if (inObject) {
+      // Object literal key: `{ $x: ... }` — not a value read.
+      if (
+        next?.text === ":" &&
+        (previous === null || previous.text === "{" || previous.text === ",")
+      ) {
+        continue;
+      }
+      // Object literal shorthand: `{ $x }` / `{ a, $x }`.
+      if (
+        (next?.text === "}" || next?.text === ",") &&
+        (previous === null || previous.text === "{" || previous.text === ",")
+      ) {
+        continue;
+      }
     }
-    // Object literal shorthand: `{ $x }` — rewriting would change the key.
-    if (
-      (next?.text === "}" || next?.text === ",") &&
-      (previous === null || previous.text === "{" || previous.text === ",")
-    ) {
-      continue;
-    }
+
     parts.push(source.slice(cursor, token.start), `ctx.use(${token.text})`);
     cursor = token.end;
   }
@@ -502,6 +548,38 @@ function matchingOpen(tokens: Token[], closeIndex: number): number {
     }
   }
   return -1;
+}
+
+/**
+ * Detects JSX in an attribute expression. Astro structures JSX in child
+ * expressions but hands attribute expressions back as raw source; emitting that
+ * source produces invalid TypeScript. Callers turn this into a compile error and
+ * point at the function-child form instead.
+ */
+export function looksLikeJsx(source: string): boolean {
+  const tokens = tokenize(source);
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.kind !== "punct" || token.text !== "<") continue;
+
+    // A comparison (`a<b`) is not JSX. Only treat `<` as JSX where an
+    // expression can start.
+    const previous = previousSignificant(tokens, i);
+    const startsExpression = previous === null ||
+      (previous.kind === "punct" &&
+        ["(", "[", "{", ",", ":", "=", "=>", "?", "||", "&&", "??", "!"]
+          .includes(previous.text)) ||
+      (previous.kind === "ident" &&
+        ["return", "yield", "default"].includes(previous.text));
+    if (!startsExpression) continue;
+
+    const next = nextSignificant(tokens, i);
+    if (!next || next.start !== token.end) continue;
+    if (next.kind === "ident" || next.text === ">" || next.text === "/") {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function findImportSpans(source: string): ImportSpan[] {

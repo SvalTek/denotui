@@ -128,3 +128,28 @@ surface.
 
 If you change expression stitching, keep parameter/default/rest syntax and type
 annotations byte-for-byte; they are validated by the type checker, not by us.
+
+## 13. Template `$store` is a value, and JSX must be a child
+
+Two authoring rules that fall out of the compiler's contract:
+
+- `rewriteReactive()` rewrites every `$name` read, including inside function
+  arguments. Writing `ctx.use($store)` in a template therefore becomes
+  `ctx.use(ctx.use($store))`. Use `$store` directly; call `ctx.use(store)` only
+  for bindings without the `$` prefix. Mutations belong in frontmatter helpers
+  (`const setFilter = (value: string) => $filter.set(value)`), because the
+  template only sees the value.
+- Astro structures JSX in child expressions but returns **attribute**
+  expressions as raw source. `render={(x) => <Row/>}` cannot be lowered without
+  a JSX parser, so `looksLikeJsx()` turns it into a compile error. Use function
+  children instead (`<Select>{(x) => <Row/>}</Select>`); this is also the
+  documented `Map` pattern. `emitAttrs()` checks nested JSX attributes for the
+  same reason.
+
+## 14. Avoid emoji-presentation glyphs in TUI content
+
+Windows Terminal renders characters such as `U+2714 ✔` through a color-emoji
+font: the foreground color is ignored, the glyph is drawn larger, and its cell
+width can differ from `string-width`. That breaks alignment and looks like a
+stray colored block. Use text-presentation or ASCII glyphs in the catalog
+(`✓`/`+`, `!`, `x`, `>`, `●`, `○`) and keep user-supplied symbols behind props.

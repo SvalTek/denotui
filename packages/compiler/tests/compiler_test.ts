@@ -1,4 +1,9 @@
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertRejects,
+  assertStringIncludes,
+} from "@std/assert";
 import { compile, parseToIR, rewriteTuiSpecifier } from "../mod.ts";
 import { generate } from "../src/codegen.ts";
 
@@ -196,4 +201,53 @@ Deno.test("runtime-only templates still import Fragment", async () => {
     'import { Fragment, component, h } from "@denotui/runtime"',
   );
   assert(!code.includes("@denotui/components"));
+});
+
+Deno.test("attribute expressions starting with a string still subscribe", async () => {
+  const { code } = await compile(
+    '<StatusBar left={"Count: " + $count} />',
+    { name: "Attr" },
+  );
+  assertStringIncludes(
+    code,
+    'left: ctx.expr(() => ("Count: " + ctx.use($count)))',
+  );
+});
+
+Deno.test("pure string attribute expressions stay unwrapped", async () => {
+  const { code } = await compile("<StatusBar left={'plain'} />", {
+    name: "Attr",
+  });
+  assertStringIncludes(code, "left: 'plain'");
+  assert(!code.includes("ctx.expr(() => ('plain'))"));
+});
+
+Deno.test("JSX in attribute expressions is rejected with guidance", async () => {
+  await assertRejects(
+    () => compile("<Select render={(x: string) => <Text>{x}</Text>} />"),
+    Error,
+    "JSX inside an attribute expression",
+  );
+});
+
+Deno.test("unterminated frontmatter is a compile error", async () => {
+  const source = `---
+const x = 1;
+<Text>{x}</Text>`;
+  await assertRejects(
+    () => compile(source, { filename: "Broken.tui" }),
+    Error,
+    'Broken.tui: unterminated frontmatter: missing closing "---"',
+  );
+});
+
+Deno.test("frontmatter with a closing fence still compiles", async () => {
+  const source = `---
+const x = 1;
+---
+
+<Text>{x}</Text>`;
+  const { code } = await compile(source, { name: "Closed" });
+  assertStringIncludes(code, "const x = 1;");
+  assertStringIncludes(code, "ctx.expr(() => (x))");
 });

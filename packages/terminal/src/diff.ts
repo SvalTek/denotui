@@ -4,7 +4,7 @@
  *
  * Unchanged cells are skipped entirely, so an idle frame emits an empty string.
  */
-import { cursorTo, RESET, sgr } from "./ansi.ts";
+import { CURSOR_HOME, cursorTo, RESET, sgr } from "./ansi.ts";
 import type { CellBuffer } from "./buffer.ts";
 import { type Style, stylesEqual } from "./style.ts";
 
@@ -13,7 +13,9 @@ function cellDiffers(
   back: CellBuffer,
   column: number,
   row: number,
+  force: boolean,
 ): boolean {
+  if (force) return true;
   const next = back.cellAt(column, row);
   if (next.continuation) return true;
   if (column >= front.width || row >= front.height) return true;
@@ -38,7 +40,16 @@ function cellDiffers(
   return false;
 }
 
-export function diffBuffers(front: CellBuffer, back: CellBuffer): string {
+/**
+ * Compare buffers and emit a frame. With `force`, every cell is written
+ * (including blanks) — used after a resize instead of clearing the screen, so
+ * there is no blank interval and old reflowed content is overwritten.
+ */
+export function diffBuffers(
+  front: CellBuffer,
+  back: CellBuffer,
+  force = false,
+): string {
   let output = "";
   let currentStyle: Style | null = null;
   let cursorRow = -1;
@@ -47,7 +58,7 @@ export function diffBuffers(front: CellBuffer, back: CellBuffer): string {
   for (let row = 0; row < back.height; row++) {
     let column = 0;
     while (column < back.width) {
-      if (!cellDiffers(front, back, column, row)) {
+      if (!cellDiffers(front, back, column, row, force)) {
         column += back.cellAt(column, row).width;
         continue;
       }
@@ -62,7 +73,7 @@ export function diffBuffers(front: CellBuffer, back: CellBuffer): string {
           column++;
           continue;
         }
-        if (!cellDiffers(front, back, column, row)) break;
+        if (!cellDiffers(front, back, column, row, force)) break;
         if (!stylesEqual(currentStyle, cell.style)) {
           output += sgr(cell.style);
           currentStyle = cell.style;
@@ -77,6 +88,9 @@ export function diffBuffers(front: CellBuffer, back: CellBuffer): string {
     }
   }
 
-  if (output !== "" && currentStyle !== null) output += RESET;
+  if (output !== "") {
+    if (currentStyle !== null) output += RESET;
+    output += CURSOR_HOME;
+  }
   return output;
 }

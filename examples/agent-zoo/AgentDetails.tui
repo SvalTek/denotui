@@ -1,0 +1,16 @@
+---
+import type { Agent } from "./stores.ts";
+
+const agent = () => (props.agent ?? null) as Agent | null;
+---
+
+<Column gap={1}>
+  <Show when={agent() !== null}>
+    <Text bold fg="brightCyan">{agent()?.name ?? ""}</Text>
+    <Text dim>{agent()?.role ?? ""} · {agent()?.status ?? ""}</Text>
+    <ProgressBar value={agent()?.progress ?? 0} label="progress" width={20} />
+  </Show>
+  <Show when={agent() === null}>
+    <Text dim>No agent selected</Text>
+  </Show>
+</Column>

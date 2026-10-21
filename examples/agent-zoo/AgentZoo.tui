@@ -1,0 +1,68 @@
+---
+import {
+  $agents,
+  $filter,
+  $log,
+  $selected,
+  filteredAgents,
+} from "./stores.ts";
+import type { Agent } from "./stores.ts";
+import AgentDetails from "./AgentDetails.tui";
+import AgentRow from "./AgentRow.tui";
+
+const setFilter = (value: string) => $filter.set(value);
+const selectAgent = (_item: Agent, index: number) => $selected.set(index);
+const pick = (agents: readonly Agent[], filter: string, index: number) =>
+  filteredAgents(agents, filter)[index] ?? null;
+
+// A new filter starts at the top of the narrowed list.
+const unlisten = $filter.listen(() => $selected.set(0));
+ctx.onCleanup(unlisten);
+---
+
+<Column height="100%" bg={234}>
+  <StatusBar
+    left="AgentZoo · live"
+    right={`${$agents.length} agents`}
+    bg="blue"
+  />
+
+  <Row flexGrow={1} gap={1} padding={1}>
+    <Panel width="44%" border="round" borderColor="cyan" direction="column" gap={1}>
+      <TextInput
+        value={$filter}
+        placeholder="filter agents"
+        autoFocus
+        onChange={setFilter}
+      />
+      <Select
+        items={filteredAgents($agents, $filter)}
+        selected={$selected}
+        onChange={selectAgent}
+      >
+        {(item: Agent, _index: number, selected: boolean) => (
+          <AgentRow agent={item} selected={selected} />
+        )}
+      </Select>
+    </Panel>
+
+    <Panel flexGrow={1} border="round" borderColor="gray" direction="column" gap={1}>
+      <AgentDetails agent={pick($agents, $filter, $selected)} />
+
+      <Text bold>Activity</Text>
+      <ScrollView height={6} contentHeight={$log.length} focusable>
+        {$log.map((line: string, index: number) => (
+          <Text key={index} dim>{line}</Text>
+        ))}
+      </ScrollView>
+    </Panel>
+  </Row>
+
+  <HelpBar
+    items={[
+      { key: "tab", label: "focus" },
+      { key: "↑/↓", label: "select" },
+      { key: "esc", label: "quit" },
+    ]}
+  />
+</Column>

@@ -14,6 +14,7 @@ import {
   asArray,
   asNumber,
   asString,
+  childrenOf,
   hostProps,
   textChildren,
 } from "./util.ts";
@@ -67,11 +68,17 @@ export const TextInput: ComponentType = component("TextInput", (props, ctx) => {
     }
   };
 
-  // Controlled mode: follow the prop. Both modes keep the cursor in range.
+  // Controlled mode: follow the prop only when it actually changed. Comparing
+  // against the previous prop (not the internal value) avoids reverting a local
+  // edit while the parent's update is still in flight.
+  let lastValue = props.value === undefined ? undefined : String(props.value);
   ctx.effect(() => {
     if (props.value !== undefined) {
       const next = String(props.value);
-      if (next !== $value.get()) $value.set(next);
+      if (next !== lastValue) {
+        lastValue = next;
+        if (next !== $value.get()) $value.set(next);
+      }
     }
     const length = $value.get().length;
     if ($cursor.get() > length) $cursor.set(length);
@@ -146,6 +153,20 @@ export const TextInput: ComponentType = component("TextInput", (props, ctx) => {
     }
     if (!focused) return h(Text, { fg: props.fg }, [display(text)]);
 
+    if (text === "") {
+      const placeholder = asString(props.placeholder, "");
+      return h(Row, { gap: 0 }, [
+        h(Text, {
+          inverse: true,
+          fg: props.cursorColor ?? props.fg,
+          bg: props.cursorBg,
+        }, [" "]),
+        placeholder === ""
+          ? null
+          : h(Text, { dim: true, fg: props.placeholderColor }, [placeholder]),
+      ]);
+    }
+
     const before = display(text.slice(0, cursor));
     const current = text[cursor];
     const after = display(text.slice(cursor + 1));
@@ -166,15 +187,21 @@ export const Select: ComponentType = component("Select", (props, ctx) => {
   const $selected = atom(asNumber(props.selected, 0));
   const itemsOf = (): unknown[] => asArray(props.items ?? [], "<Select> items");
 
+  let lastSelected = typeof props.selected === "number" ? props.selected : null;
   ctx.effect(() => {
     const length = itemsOf().length;
     const requested = typeof props.selected === "number"
       ? props.selected
-      : $selected.get();
-    const clamped = length === 0
-      ? 0
-      : Math.max(0, Math.min(requested, length - 1));
-    if (clamped !== $selected.get()) $selected.set(clamped);
+      : null;
+    if (requested !== null && requested !== lastSelected) {
+      lastSelected = requested;
+      const clamped = length === 0
+        ? 0
+        : Math.max(0, Math.min(requested, length - 1));
+      if (clamped !== $selected.get()) $selected.set(clamped);
+    } else if (length > 0 && $selected.get() >= length) {
+      $selected.set(length - 1);
+    }
   });
 
   const move = (next: number, commit: boolean): void => {
@@ -224,23 +251,23 @@ export const Select: ComponentType = component("Select", (props, ctx) => {
     h(List, {
       items: itemsOf(),
       selected: ctx.use($selected),
-      render: props.render,
       focused: focus.isFocused(),
       marker: props.marker,
       markerColor: props.markerColor,
       gap: props.gap,
-    }, []);
+    }, childrenOf(props));
 });
 
 export const Checkbox: ComponentType = component("Checkbox", (props, ctx) => {
   const focus = ctx.focus({ autoFocus: props.autoFocus === true });
   const $checked = atom(props.checked === true);
 
+  let lastChecked = typeof props.checked === "boolean" ? props.checked : null;
   ctx.effect(() => {
-    if (
-      typeof props.checked === "boolean" && props.checked !== $checked.get()
-    ) {
-      $checked.set(props.checked);
+    const next = typeof props.checked === "boolean" ? props.checked : null;
+    if (next !== null && next !== lastChecked) {
+      lastChecked = next;
+      if (next !== $checked.get()) $checked.set(next);
     }
   });
 
@@ -282,13 +309,19 @@ export const Toggle: ComponentType = component("Toggle", (props, ctx) => {
   const focus = ctx.focus({ autoFocus: props.autoFocus === true });
   const $on = atom(props.on === true || props.checked === true);
 
-  ctx.effect(() => {
-    const controlled = typeof props.on === "boolean"
+  const controlledValue = (): boolean | null =>
+    typeof props.on === "boolean"
       ? props.on
       : typeof props.checked === "boolean"
       ? props.checked
       : null;
-    if (controlled !== null && controlled !== $on.get()) $on.set(controlled);
+  let lastOn = controlledValue();
+  ctx.effect(() => {
+    const next = controlledValue();
+    if (next !== null && next !== lastOn) {
+      lastOn = next;
+      if (next !== $on.get()) $on.set(next);
+    }
   });
 
   const toggle = (): void => {

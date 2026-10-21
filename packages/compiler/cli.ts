@@ -23,12 +23,18 @@ async function main(argv: string[]): Promise<void> {
   const check = rest.includes("--check");
   const dir = rest.find((arg) => !arg.startsWith("-")) ?? ".";
 
-  const summary = await build({ dir, check });
-  const verb = check ? "would write" : "wrote";
-  for (const file of summary.written) console.log(`${verb} ${file}`);
-  console.log(
-    `${summary.written.length} ${verb}, ${summary.unchanged.length} unchanged`,
-  );
+  try {
+    const summary = await build({ dir, check });
+    const verb = check ? "would write" : "wrote";
+    for (const file of summary.written) console.log(`${verb} ${file}`);
+    console.log(
+      `${summary.written.length} ${verb}, ${summary.unchanged.length} unchanged`,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`error: ${message}`);
+    Deno.exit(1);
+  }
 }
 
 if (import.meta.main) {

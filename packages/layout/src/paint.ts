@@ -6,7 +6,7 @@
  * to the current clip rectangle. Box props `scrollX`/`scrollY` shift children
  * inside that clip (ScrollView).
  */
-import type { CellBuffer, Style } from "@denotui/terminal";
+import { type CellBuffer, DEFAULT_STYLE, type Style } from "@denotui/terminal";
 import type {
   BorderPlan,
   BorderStyle,
@@ -89,13 +89,14 @@ function paintBorder(
   buffer: CellBuffer,
   box: LayoutBox,
   clip: Clip,
+  background: string | number | null,
 ): void {
   const plan: BorderPlan | null = box.border;
   if (plan === null || box.width <= 0 || box.height <= 0) return;
   const chars = BORDER_CHARS[plan.style];
   const style: Style = {
     fg: plan.color,
-    bg: null,
+    bg: background,
     bold: false,
     dim: false,
     italic: false,
@@ -175,18 +176,25 @@ export function paintLayout(
   buffer: CellBuffer,
   nodes: readonly LayoutNode[],
 ): void {
-  paintNodes(buffer, nodes, {
-    x: 0,
-    y: 0,
-    width: buffer.width,
-    height: buffer.height,
-  });
+  paintNodes(
+    buffer,
+    nodes,
+    { x: 0, y: 0, width: buffer.width, height: buffer.height },
+    null,
+  );
 }
 
+/**
+ * `inheritedBackground` is the nearest ancestor box background. Text and border
+ * cells take it when their own style has no background, so a surface (status
+ * bar, panel, root) stays contiguous instead of showing terminal-default holes
+ * behind glyphs.
+ */
 function paintNodes(
   buffer: CellBuffer,
   nodes: readonly LayoutNode[],
   clip: Clip,
+  inheritedBackground: string | number | null,
 ): void {
   for (const node of nodes) {
     if (node.kind === "box") {
@@ -196,21 +204,24 @@ function paintNodes(
         width: node.width,
         height: node.height,
       });
-      if (node.background !== null && boxClip.width > 0 && boxClip.height > 0) {
+      const background = node.background ?? inheritedBackground;
+      if (background !== null && boxClip.width > 0 && boxClip.height > 0) {
         buffer.fill(
           boxClip.x,
           boxClip.y,
           boxClip.width,
           boxClip.height,
-          backgroundStyle(node.background),
+          backgroundStyle(background),
         );
       }
-      paintBorder(buffer, node, clip);
       paintNodes(
         buffer,
         node.children,
-        node.clip ? boxClip : clip,
+        node.clip ? intersect(clip, node.content) : clip,
+        background,
       );
+      // Paint the border after children so scrolled content cannot erase it.
+      paintBorder(buffer, node, clip, background);
       continue;
     }
 
@@ -220,6 +231,15 @@ function paintNodes(
     const right = Math.min(node.x + node.width, clip.x + clip.width);
     if (right <= left || bottom <= top) continue;
 
+    let style = node.style;
+    if (inheritedBackground !== null) {
+      if (style === null) {
+        style = { ...DEFAULT_STYLE, bg: inheritedBackground };
+      } else if (style.bg === null) {
+        style = { ...style, bg: inheritedBackground };
+      }
+    }
+
     for (let row = top; row < bottom; row++) {
       const line = node.lines[row - node.y];
       if (line === undefined) break;
@@ -227,7 +247,7 @@ function paintNodes(
         left,
         row,
         sliceColumns(line, left - node.x, right - left),
-        node.style,
+        style,
         right - left,
       );
     }

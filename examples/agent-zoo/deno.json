@@ -3,6 +3,6 @@
   "exports": "./main.ts",
   "publish": false,
   "tasks": {
-    "start": "deno run -A main.ts"
+    "start": "deno run -RE=NODE_ENV main.ts"
   }
 }

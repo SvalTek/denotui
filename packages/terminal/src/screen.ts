@@ -8,6 +8,8 @@
  */
 import {
   CLEAR_SCREEN,
+  DISABLE_WRAP,
+  ENABLE_WRAP,
   ENTER_ALT_SCREEN,
   EXIT_ALT_SCREEN,
   HIDE_CURSOR,
@@ -62,7 +64,7 @@ export class Screen {
     };
     this.#provideSize = options.size ?? defaultSize;
     this.#altScreen = options.altScreen ?? true;
-    this.#pollMs = options.resizePollMs ?? 200;
+    this.#pollMs = options.resizePollMs ?? 50;
     this.#size = this.#provideSize();
   }
 
@@ -78,7 +80,9 @@ export class Screen {
     if (this.#started) return;
     this.#started = true;
     const prefix = this.#altScreen ? ENTER_ALT_SCREEN + CLEAR_SCREEN : "";
-    this.write(prefix + HIDE_CURSOR);
+    // Reset inherited SGR state before the first frame: the diff assumes a
+    // clean terminal and would otherwise inherit a previous program's style.
+    this.write(RESET + prefix + HIDE_CURSOR + DISABLE_WRAP);
     this.#timer = setInterval(() => this.checkResize(), this.#pollMs);
   }
 
@@ -90,7 +94,7 @@ export class Screen {
       this.#timer = null;
     }
     const suffix = this.#altScreen ? EXIT_ALT_SCREEN : "";
-    this.write(RESET + SHOW_CURSOR + suffix);
+    this.write(RESET + ENABLE_WRAP + SHOW_CURSOR + suffix);
   }
 
   write(frame: string): void {

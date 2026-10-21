@@ -62,6 +62,8 @@ export function createApp(
   let running = false;
   let started = false;
 
+  let forceFull = false;
+
   const paint = (): void => {
     if (!running || tree === null) return;
     const size = screen.size;
@@ -74,7 +76,8 @@ export function createApp(
       back,
       layoutTree(tree, { width: size.columns, height: size.rows }),
     );
-    const frame = diffBuffers(front, back);
+    const frame = diffBuffers(front, back, forceFull);
+    forceFull = false;
     if (frame !== "") screen.write(frame);
     const previous = front;
     front = back;
@@ -87,8 +90,12 @@ export function createApp(
   });
 
   screen.onResize(() => {
+    // Force a full-cell repaint instead of clearing: the terminal may already
+    // have reflowed content, and a clear causes a visible blank frame. Every
+    // visible cell (including blanks) is written in one atomic frame.
     front = new CellBuffer(screen.size.columns, screen.size.rows);
     back = new CellBuffer(screen.size.columns, screen.size.rows);
+    forceFull = true;
     paint();
   });
 
@@ -101,15 +108,31 @@ export function createApp(
     screen.stop();
   };
 
+  root.onError = (error) => {
+    // Restore the terminal before the process dies. A failure while restoring
+    // must not mask the original error.
+    try {
+      stop();
+    } catch {
+      // Best effort: continue to surface the original error.
+    }
+    throw error;
+  };
+
   const handleKey = (key: KeyEvent): void => {
     if (!running) return;
-    const event = root.dispatchKey(key);
-    if (!event.propagationStopped) options.onKey?.(event);
-    if (
-      !event.defaultPrevented && running && options.exitOnCtrlC !== false &&
-      event.ctrl && event.name === "c"
-    ) {
+    try {
+      const event = root.dispatchKey(key);
+      if (!event.propagationStopped) options.onKey?.(event);
+      if (
+        !event.defaultPrevented && running && options.exitOnCtrlC !== false &&
+        event.ctrl && event.name === "c"
+      ) {
+        stop();
+      }
+    } catch (error) {
       stop();
+      throw error;
     }
   };
 

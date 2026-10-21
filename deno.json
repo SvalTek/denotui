@@ -2,19 +2,27 @@
   "name": "@denotui/deno-tui",
   "version": "0.1.0",
   "exports": "./mod.ts",
-  "workspace": ["./packages/*", "./examples/*"],
+  "workspace": [
+    "./packages/*",
+    "./examples/*"
+  ],
   "tasks": {
     "check": "deno check . tests",
     "test": "deno test -RE=NODE_ENV",
     "fmt": "deno fmt",
     "lint": "deno lint",
-    "build:examples": "deno run -RWN packages/compiler/cli.ts build examples"
+    "build:examples": "deno run -RWN packages/compiler/cli.ts build examples",
+    "example:zoo": "deno task build:examples && deno check examples/agent-zoo/main.ts && deno run -RE=NODE_ENV examples/agent-zoo/main.ts"
   },
-  "exclude": ["local"],
+  "exclude": [
+    "local"
+  ],
   "lint": {},
   "fmt": {},
   "test": {
-    "exclude": ["local"]
+    "exclude": [
+      "local"
+    ]
   },
   "imports": {
     "@astrojs/compiler": "npm:@astrojs/compiler@^4.0.0",

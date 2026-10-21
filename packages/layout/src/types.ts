@@ -52,6 +52,8 @@ export interface LayoutBox {
   readonly border: BorderPlan | null;
   /** Clip children to this box (overflow hidden). */
   readonly clip: boolean;
+  /** Inner box after border + padding; the clip region for scrolled children. */
+  readonly content: { x: number; y: number; width: number; height: number };
   readonly children: LayoutNode[];
 }
 

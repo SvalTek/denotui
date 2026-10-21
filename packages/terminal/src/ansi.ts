@@ -12,9 +12,14 @@ import type { Color, Style } from "./style.ts";
 export const ENTER_ALT_SCREEN = "\x1b[?1049h";
 export const EXIT_ALT_SCREEN = "\x1b[?1049l";
 export const HIDE_CURSOR = "\x1b[?25l";
+/** DECAWM off: writes at the last column must not wrap/scroll the screen. */
+export const DISABLE_WRAP = "\x1b[?7l";
+export const ENABLE_WRAP = "\x1b[?7h";
 export const SHOW_CURSOR = "\x1b[?25h";
 export const CLEAR_SCREEN = "\x1b[2J\x1b[H";
 export const RESET = "\x1b[0m";
+/** Park the hidden cursor at the top-left so a resize cannot scroll to it. */
+export const CURSOR_HOME = "\x1b[H";
 
 export function cursorTo(row: number, column: number): string {
   return `\x1b[${row};${column}H`;
@@ -73,7 +78,14 @@ function colorCode(color: Color, background: boolean): string {
   return String((background ? 100 : 90) + named - 8);
 }
 
-/** SGR sequence for a style; `null` means the terminal default. */
+/**
+ * SGR sequence for a style; `null` means the terminal default.
+ *
+ * Always resets first: SGR attributes are cumulative, so emitting only the next
+ * style's codes lets inverse/background/bold leak into later cells (the classic
+ * "white blocks" TUI artifact). One reset per style change is cheaper than
+ * tracking and clearing each attribute.
+ */
 export function sgr(style: Style | null): string {
   if (style === null) return RESET;
   const codes: string[] = [];
@@ -84,5 +96,5 @@ export function sgr(style: Style | null): string {
   if (style.inverse) codes.push("7");
   if (style.fg !== null) codes.push(colorCode(style.fg, false));
   if (style.bg !== null) codes.push(colorCode(style.bg, true));
-  return codes.length ? `\x1b[${codes.join(";")}m` : RESET;
+  return codes.length ? RESET + `\x1b[${codes.join(";")}m` : RESET;
 }

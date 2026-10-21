@@ -4,7 +4,10 @@ import {
   attachKeypress,
   CellBuffer,
   CLEAR_SCREEN,
+  CURSOR_HOME,
   diffBuffers,
+  DISABLE_WRAP,
+  ENABLE_WRAP,
   ENTER_ALT_SCREEN,
   EXIT_ALT_SCREEN,
   HIDE_CURSOR,
@@ -35,14 +38,14 @@ function tick(): Promise<void> {
 
 Deno.test("sgr serializes attributes, named, palette and hex colors", () => {
   assertEquals(sgr(null), RESET);
-  assertEquals(sgr(bold), "\x1b[1m");
+  assertEquals(sgr(bold), RESET + "\x1b[1m");
   assertEquals(
     sgr({ ...bold, fg: "red", bg: "#102030" }),
-    "\x1b[1;31;48;2;16;32;48m",
+    RESET + "\x1b[1;31;48;2;16;32;48m",
   );
   assertEquals(
     sgr({ ...bold, fg: "brightBlue", bg: 200 }),
-    "\x1b[1;94;48;5;200m",
+    RESET + "\x1b[1;94;48;5;200m",
   );
   assertThrows(() => sgr({ ...bold, fg: "chartreuse" }), TypeError, "color");
   assertThrows(() => sgr({ ...bold, fg: 300 }), TypeError, "0-255");
@@ -92,7 +95,7 @@ Deno.test("diff emits cursor moves and only changed cells", () => {
   assertEquals(diffBuffers(front, back), "");
 
   back.putText(0, 0, "hi", null);
-  assertEquals(diffBuffers(front, back), "\x1b[1;1Hhi");
+  assertEquals(diffBuffers(front, back), "\x1b[1;1Hhi" + CURSOR_HOME);
 
   back.putText(0, 1, "ok", null);
   assert(
@@ -102,14 +105,27 @@ Deno.test("diff emits cursor moves and only changed cells", () => {
 
   const styled = new CellBuffer(5, 1);
   styled.putText(0, 0, "hi", bold);
-  assertEquals(diffBuffers(front, styled), "\x1b[1;1H\x1b[1mhi\x1b[0m");
+  assertEquals(
+    diffBuffers(front, styled),
+    "\x1b[1;1H" + RESET + "\x1b[1mhi" + RESET + CURSOR_HOME,
+  );
+});
+
+Deno.test("forced diff rewrites blank cells too", () => {
+  const front = new CellBuffer(3, 1);
+  front.putText(0, 0, "X", null);
+  const back = new CellBuffer(3, 1);
+  assertEquals(
+    diffBuffers(front, back, true),
+    "\x1b[1;1H   " + CURSOR_HOME,
+  );
 });
 
 Deno.test("diff writes wide glyphs once and skips unchanged frames", () => {
   const front = new CellBuffer(4, 1);
   const back = new CellBuffer(4, 1);
   back.putText(0, 0, "日", null);
-  assertEquals(diffBuffers(front, back), "\x1b[1;1H日");
+  assertEquals(diffBuffers(front, back), "\x1b[1;1H日" + CURSOR_HOME);
   assertEquals(diffBuffers(back, back), "");
 });
 
@@ -134,8 +150,8 @@ Deno.test("screen enters/exits alternate screen and survives partial writes", ()
   const output = chunks.join("");
   assertEquals(
     output,
-    ENTER_ALT_SCREEN + CLEAR_SCREEN + HIDE_CURSOR + "abcd" + RESET +
-      SHOW_CURSOR + EXIT_ALT_SCREEN,
+    RESET + ENTER_ALT_SCREEN + CLEAR_SCREEN + HIDE_CURSOR + DISABLE_WRAP +
+      "abcd" + RESET + ENABLE_WRAP + SHOW_CURSOR + EXIT_ALT_SCREEN,
   );
 });
 

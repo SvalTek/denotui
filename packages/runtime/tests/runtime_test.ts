@@ -288,3 +288,61 @@ Deno.test("onCommit fires on mount and after updates", () => {
   root.unmount();
   assertEquals(seen, ["0", "1", ""]);
 });
+
+Deno.test("duplicate keys do not orphan mounted instances", () => {
+  const $n = atom(0);
+  let created = 0;
+  let cleanups = 0;
+  const Child = component("Child", (_props, ctx) => {
+    created++;
+    ctx.onCleanup(() => {
+      cleanups++;
+    });
+    return () => h(Text, null, ["x"]);
+  });
+  const Parent = component("Parent", (_props, ctx) => () => {
+    ctx.use($n);
+    return h(Fragment, null, [
+      h(Fragment, { key: "dup" }, [h(Child, null, [])]),
+      h(Fragment, { key: "dup" }, [h(Child, null, [])]),
+    ]);
+  });
+
+  const root = createRoot();
+  root.mount(Parent);
+  $n.set(1);
+  root.flush();
+  root.unmount();
+  assertEquals(cleanups, created);
+});
+
+Deno.test("scheduled frame errors reach root.onError", async () => {
+  const $fail = atom(false);
+  const Boom = component("Boom", (_props, ctx) => () => {
+    ctx.use($fail);
+    if ($fail.get()) throw new Error("boom");
+    return h(Text, null, ["ok"]);
+  });
+  const root = createRoot();
+  let captured: unknown = null;
+  root.onError = (error) => {
+    captured = error;
+  };
+  root.mount(Boom);
+
+  $fail.set(true);
+  const tick = Promise.withResolvers<void>();
+  setTimeout(tick.resolve, 0);
+  await tick.promise;
+  assert(captured instanceof Error);
+  root.unmount();
+});
+
+Deno.test("effect and cleanup registration are frontmatter-only", () => {
+  const Bad = component("Bad", (_props, ctx) => () => {
+    ctx.effect(() => {});
+    return h(Text, null, ["x"]);
+  });
+  const root = createRoot();
+  assertThrows(() => root.mount(Bad), Error, "frontmatter");
+});

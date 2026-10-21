@@ -20,17 +20,17 @@ export const ScrollView: ComponentType = component(
       : null;
     const $scroll = atom(Math.max(0, asNumber(props.scroll, 0)));
 
-    function maxScroll(): number {
+    function maxScroll(): number | null {
       const viewport = asNumber(props.height, 0);
       const content = asNumber(props.contentHeight, Number.POSITIVE_INFINITY);
-      if (viewport <= 0 || !Number.isFinite(content)) {
-        return Number.MAX_SAFE_INTEGER;
-      }
+      if (viewport <= 0 || !Number.isFinite(content)) return null;
       return Math.max(0, content - viewport);
     }
 
     function scrollTo(next: number): void {
-      const clamped = Math.max(0, Math.min(Math.round(next), maxScroll()));
+      const max = maxScroll();
+      if (max === null) return;
+      const clamped = Math.max(0, Math.min(Math.round(next), max));
       if (clamped === $scroll.get()) return;
       $scroll.set(clamped);
       const onScroll = props.onScroll;
@@ -39,11 +39,18 @@ export const ScrollView: ComponentType = component(
       }
     }
 
+    let lastScroll = typeof props.scroll === "number" ? props.scroll : null;
     ctx.effect(() => {
-      if (typeof props.scroll === "number" && props.scroll !== $scroll.get()) {
-        $scroll.set(Math.max(0, Math.min(props.scroll, maxScroll())));
-      } else if ($scroll.get() > maxScroll()) {
-        $scroll.set(Math.max(0, maxScroll()));
+      const requested = typeof props.scroll === "number" ? props.scroll : null;
+      const max = maxScroll();
+      if (requested !== null && requested !== lastScroll) {
+        lastScroll = requested;
+        const clamped = max === null
+          ? Math.max(0, requested)
+          : Math.max(0, Math.min(requested, max));
+        if (clamped !== $scroll.get()) $scroll.set(clamped);
+      } else if (max !== null && $scroll.get() > max) {
+        $scroll.set(max);
       }
     });
 
@@ -73,10 +80,12 @@ export const ScrollView: ComponentType = component(
             scrollTo(0);
             event.preventDefault();
             break;
-          case "end":
-            scrollTo(maxScroll());
+          case "end": {
+            const max = maxScroll();
+            if (max !== null) scrollTo(max);
             event.preventDefault();
             break;
+          }
         }
       });
     }

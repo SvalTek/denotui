@@ -208,3 +208,58 @@ Deno.test("overflow hidden clips children and scroll offsets shift content", () 
   assertEquals(buffer.cellAt(0, 1).char, "c");
   assertEquals(buffer.cellAt(0, 2).char, " ");
 });
+
+Deno.test("backgrounds inherit through boxes and borders", () => {
+  const tree = layoutTree(
+    box({ bg: "blue" }, [
+      box({ border: "single" }, [text("x")]),
+    ]),
+    { width: 8, height: 5 },
+  );
+  const buffer = new CellBuffer(8, 5);
+  paintLayout(buffer, tree);
+  // Border corner inherits the surface background.
+  assertEquals(buffer.cellAt(0, 0).char, "┌");
+  assertEquals(buffer.cellAt(0, 0).style?.bg, "blue");
+  // Text cells inherit it too, instead of punching a terminal-default hole.
+  const run = tree[0].kind === "box" ? tree[0].children[0] : null;
+  assert(run && run.kind === "box");
+  const textNode = run.children[0];
+  assert(textNode.kind === "text");
+  assertEquals(buffer.cellAt(textNode.x, textNode.y).style?.bg, "blue");
+});
+
+Deno.test("explicit text background overrides the inherited surface", () => {
+  const tree = layoutTree(
+    box({ bg: "blue" }, [
+      text("x", { bg: "red" }),
+    ]),
+    { width: 8, height: 3 },
+  );
+  const buffer = new CellBuffer(8, 3);
+  paintLayout(buffer, tree);
+  assertEquals(buffer.cellAt(0, 0).style?.bg, "red");
+});
+
+Deno.test("scrolled children clip to the content box and preserve borders", () => {
+  const tree = layoutTree(
+    box(
+      {
+        border: "single",
+        overflow: "hidden",
+        height: 3,
+        width: 10,
+        scrollY: 1,
+      },
+      [text("a"), text("b"), text("c")],
+    ),
+    { width: 12, height: 5 },
+  );
+  const buffer = new CellBuffer(12, 5);
+  paintLayout(buffer, tree);
+  assertEquals(buffer.cellAt(0, 0).char, "┌");
+  assertEquals(buffer.cellAt(0, 2).char, "└");
+  assertEquals(buffer.cellAt(0, 1).char, "│");
+  assertEquals(buffer.cellAt(9, 1).char, "│");
+  assertEquals(buffer.cellAt(1, 1).char, "b");
+});

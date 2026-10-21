@@ -24,11 +24,13 @@ export const Badge: ComponentType = component("Badge", (props) => () => {
   ]);
 });
 
+// Text-presentation/ASCII icons only: Windows Terminal renders U+2714 and
+// friends as color emoji with a different cell width, which breaks alignment.
 const VARIANTS: Record<string, { color: string; icon: string }> = {
-  info: { color: "cyan", icon: "ℹ" },
-  success: { color: "green", icon: "✔" },
-  warning: { color: "yellow", icon: "▲" },
-  error: { color: "red", icon: "✖" },
+  info: { color: "cyan", icon: "i" },
+  success: { color: "green", icon: "+" },
+  warning: { color: "yellow", icon: "!" },
+  error: { color: "red", icon: "x" },
 };
 
 export const Alert: ComponentType = component("Alert", (props) => () => {

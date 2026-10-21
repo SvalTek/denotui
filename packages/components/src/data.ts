@@ -5,23 +5,29 @@
  */
 import { component, type ComponentType, h } from "@denotui/runtime";
 import { Text } from "./builtins.ts";
+import { childrenOf } from "./util.ts";
 import { Column, Row } from "./layout.ts";
 import {
   asArray,
   asNumber,
+  displayWidth,
   itemKey,
   labelOf,
   padEnd,
   padStart,
-  renderChild,
   truncate,
 } from "./util.ts";
 
 export const List: ComponentType = component("List", (props) => () => {
   const items = asArray(props.items ?? [], "<List> items");
   const selected = asNumber(props.selected, -1);
-  const marker = props.marker !== undefined ? String(props.marker) : "❯";
-  const render = renderChild(props);
+  const marker = props.marker !== undefined ? String(props.marker) : ">";
+  const childRender = childrenOf(props).find((child) =>
+    typeof child === "function"
+  );
+  const render = (childRender ?? null) as
+    | ((item: unknown, index: number, selected: boolean) => unknown)
+    | null;
   const focused = props.focused === true;
   const markerColor = props.markerColor ??
     (focused ? "brightCyan" : "gray");
@@ -89,10 +95,10 @@ export const Table: ComponentType = component("Table", (props) => () => {
   const header = props.header !== false;
 
   const widths = columns.map((column) => {
-    let width = column.width ?? Math.max(1, column.title.length);
+    let width = column.width ?? Math.max(1, displayWidth(column.title));
     if (column.width === null) {
       for (const row of rows) {
-        width = Math.max(width, cellValue(row, column.key).length);
+        width = Math.max(width, displayWidth(cellValue(row, column.key)));
       }
     }
     return width;
@@ -160,7 +166,7 @@ function keyValuePairs(value: unknown): Array<[string, string]> {
 export const KeyValue: ComponentType = component("KeyValue", (props) => () => {
   const pairs = keyValuePairs(props.items ?? {});
   const labelWidth = pairs.reduce(
-    (width, [label]) => Math.max(width, label.length),
+    (width, [label]) => Math.max(width, displayWidth(label)),
     0,
   );
   return h(

@@ -246,10 +246,12 @@ class InstanceCtx implements Ctx {
   }
 
   effect(fn: EffectFn): void {
+    this.#assertInit("ctx.effect()");
     this.instance.effects.push({ fn, cleanup: null });
   }
 
   onCleanup(fn: () => void): void {
+    this.#assertInit("ctx.onCleanup()");
     this.instance.cleanups.push(fn);
   }
 }
@@ -271,6 +273,8 @@ export class Root {
   #dirty = new Set<Instance>();
   #scheduled = false;
   #flushing = false;
+  /** Called when a scheduled frame throws; lets the app restore the terminal. */
+  onError: ((error: unknown) => void) | null = null;
   #listeners = new Set<(document: FragmentNode) => void>();
 
   constructor() {
@@ -348,7 +352,12 @@ export class Root {
     this.#scheduled = true;
     queueMicrotask(() => {
       this.#scheduled = false;
-      this.flush();
+      try {
+        this.flush();
+      } catch (error) {
+        if (this.onError === null) throw error;
+        this.onError(error);
+      }
     });
   }
 
@@ -475,7 +484,13 @@ function reconcileValues(
   const unkeyed: Node[] = [];
   for (const old of oldNodes) {
     const key = nodeKey(old);
-    if (key === null) unkeyed.push(old);
+    if (key === null) {
+      unkeyed.push(old);
+      continue;
+    }
+    // Duplicate keys are a caller error, but they must not orphan a mounted
+    // instance: keep the extra node in the positional pool so it is unmounted.
+    if (keyed.has(key)) unkeyed.push(old);
     else keyed.set(key, old);
   }
 

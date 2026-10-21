@@ -33,6 +33,11 @@ const title = "AgentZoo";
   other statement becomes the instance body.
 - Import specifiers ending in `.tui` are rewritten to `.tui.ts` (the generated
   sibling). See [`compiler.md`](./compiler.md).
+- Frontmatter locals are **snapshots**: `const agent = props.agent` keeps the
+  first value even though the props object is updated in place. When a value
+  must track updates, read it in the render function (e.g. define
+  `const agent = () => props.agent` in frontmatter and call `agent()` in the
+  template).
 
 ## Template
 
@@ -97,7 +102,9 @@ typing:
   (Enter/Space), `ScrollView` (arrows/PageUp/PageDown/Home/End when
   `focusable`).
 - Handlers can call `preventDefault()` (e.g. keep Tab inside a component) and
-  `stopPropagation()` (keep the app from seeing a key).
+  `stopPropagation()` (keep the app from seeing a key). An app `onKey` handler
+  should skip `event.defaultPrevented` keys; that is how a focused filter can
+  leave arrow keys to the app while still consuming typing.
 - `createApp({ onKey })` still receives keys that components did not stop.
   Ctrl-C quits unless prevented.
 - Custom components call `ctx.focus()` and `ctx.onKey()` in frontmatter.
@@ -152,7 +159,20 @@ reconstructs the JSX inside it into `h(...)` calls but keeps the surrounding
 arrow syntax intact. `Map` decides when to call it, and keys rows by
 `item.id`/`item.key` when present (otherwise by index). `$store` reads inside
 the function are rewritten to `ctx.use($store)` and run when `Map` invokes it.
-Any component may accept function children the same way.
+
+`List` and `Select` use the same contract:
+
+```
+<List items={$agents} selected={$selected}>
+  {(agent: Agent, index: number, selected: boolean) => (
+    <AgentRow agent={agent} selected={selected} />
+  )}
+</List>
+```
+
+There is deliberately **no render prop**. JSX inside an attribute expression
+(`render={(x) => <Row/>}`) is not structured by Astro and is a compile error;
+put the function in the element's children.
 
 ## What is intentionally not supported (v1)
 

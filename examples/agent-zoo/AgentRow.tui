@@ -1,0 +1,18 @@
+---
+import type { Agent } from "./stores.ts";
+
+const agent = () => props.agent as Agent;
+const selected = () => props.selected === true;
+---
+
+<Row gap={1}>
+  <Text fg={agent().status === "working"
+    ? "green"
+    : agent().status === "done"
+    ? "cyan"
+    : "gray"}>
+    {agent().status === "working" ? "●" : agent().status === "done" ? "✓" : "○"}
+  </Text>
+  <Text bold={selected()}>{agent().name}</Text>
+  <Text dim>{agent().role}</Text>
+</Row>

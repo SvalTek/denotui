@@ -39,6 +39,7 @@ deno task test            # run all tests (reads env NODE_ENV only)
 deno task fmt             # format
 deno task lint            # lint
 deno task build:examples  # compile examples/**/*.tui -> *.tui.ts
+deno task example:zoo    # build, then run the AgentZoo example
 ```
 
 `local/` is excluded from `check` and `test` — the experiment spikes there are

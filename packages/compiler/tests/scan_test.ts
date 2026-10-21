@@ -1,5 +1,10 @@
 import { assert, assertEquals } from "@std/assert";
-import { findImportSpans, rewriteReactive, tokenize } from "../src/scan.ts";
+import {
+  findImportSpans,
+  looksLikeJsx,
+  rewriteReactive,
+  tokenize,
+} from "../src/scan.ts";
 import { splitFrontmatter } from "../src/parse.ts";
 
 Deno.test("rewriteReactive rewrites store reads in expressions", () => {
@@ -34,7 +39,24 @@ Deno.test("rewriteReactive rewrites inside template literal holes only", () => {
 Deno.test("rewriteReactive leaves object keys and shorthand alone", () => {
   assertEquals(rewriteReactive("{ $a: 1 }"), "{ $a: 1 }");
   assertEquals(rewriteReactive("{ $a }"), "{ $a }");
+  assertEquals(rewriteReactive("{ $a, $b }"), "{ $a, $b }");
   assertEquals(rewriteReactive("[{ $a }]"), "[{ $a }]");
+  assertEquals(rewriteReactive("() => ({ $a })"), "() => ({ $a })");
+});
+
+Deno.test("rewriteReactive rewrites store reads in call arguments", () => {
+  assertEquals(
+    rewriteReactive("pick($a, $b, $c)"),
+    "pick(ctx.use($a), ctx.use($b), ctx.use($c))",
+  );
+  assertEquals(
+    rewriteReactive("filtered($agents, $filter)"),
+    "filtered(ctx.use($agents), ctx.use($filter))",
+  );
+});
+
+Deno.test("rewriteReactive treats arrow bodies as blocks, not objects", () => {
+  assertEquals(rewriteReactive("() => { $x }"), "() => { ctx.use($x) }");
 });
 
 Deno.test("tokenizer distinguishes regex from division", () => {
@@ -110,4 +132,13 @@ const c = 1
 
 Deno.test("findImportSpans skips dynamic import and import.meta", () => {
   assertEquals(findImportSpans("import.meta.url;\nimport('./x.ts');"), []);
+});
+
+Deno.test("looksLikeJsx only treats expression-start '<' as JSX", () => {
+  assertEquals(looksLikeJsx("a<b"), false);
+  assertEquals(looksLikeJsx("x < y"), false);
+  assertEquals(looksLikeJsx("count < 10"), false);
+  assertEquals(looksLikeJsx("(item) => <Text>{item}</Text>"), true);
+  assertEquals(looksLikeJsx("return <Text />"), true);
+  assertEquals(looksLikeJsx("[<Row />]"), true);
 });

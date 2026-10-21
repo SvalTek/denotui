@@ -161,8 +161,16 @@ function emitProps(attrs: AttrIR[]): string {
 
 /** Attribute string literals pass through; dynamic values are lazily wrapped. */
 function wrapAttrExpr(value: string): string {
-  if (value.startsWith('"') || value.startsWith("'")) return value;
-  return `ctx.expr(() => (${rewriteReactive(value)}))`;
+  return isStringLiteral(value)
+    ? value.trim()
+    : `ctx.expr(() => (${rewriteReactive(value)}))`;
+}
+
+/** True only when the whole expression is one quoted string literal. */
+function isStringLiteral(value: string): boolean {
+  const trimmed = value.trim();
+  return /^"(?:[^"\\]|\\.)*"$/.test(trimmed) ||
+    /^'(?:[^'\\]|\\.)*'$/.test(trimmed);
 }
 
 /** Template text/JSX expressions route through ctx.expr for store detection. */

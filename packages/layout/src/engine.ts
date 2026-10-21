@@ -407,13 +407,16 @@ export function layoutTree(
     children: [],
   };
 
-  buildChildren(root, [source]);
-  rootYoga.calculateLayout(options.width, options.height, Yoga.DIRECTION_LTR);
+  try {
+    buildChildren(root, [source]);
+    rootYoga.calculateLayout(options.width, options.height, Yoga.DIRECTION_LTR);
 
-  const output: LayoutNode[] = [];
-  collect(root, 0, 0, output);
-  rootYoga.freeRecursive();
-  return output;
+    const output: LayoutNode[] = [];
+    collect(root, 0, 0, output);
+    return output;
+  } finally {
+    rootYoga.freeRecursive();
+  }
 }
 
 function buildChildren(
@@ -459,22 +462,27 @@ function buildChildren(
 
 function buildBox(host: LayoutInputHost): BuildNode {
   const yoga = Yoga.Node.create();
-  applyBoxStyle(yoga, host.props);
-  const node: BuildNode = {
-    kind: "box",
-    yoga,
-    props: host.props,
-    text: "",
-    wrap: false,
-    style: null,
-    border: readBorder(host.props),
-    clip: host.props.overflow === "hidden",
-    scrollX: isNumber(host.props.scrollX) ? host.props.scrollX : 0,
-    scrollY: isNumber(host.props.scrollY) ? host.props.scrollY : 0,
-    children: [],
-  };
-  buildChildren(node, host.children);
-  return node;
+  try {
+    applyBoxStyle(yoga, host.props);
+    const node: BuildNode = {
+      kind: "box",
+      yoga,
+      props: host.props,
+      text: "",
+      wrap: false,
+      style: null,
+      border: readBorder(host.props),
+      clip: host.props.overflow === "hidden",
+      scrollX: isNumber(host.props.scrollX) ? host.props.scrollX : 0,
+      scrollY: isNumber(host.props.scrollY) ? host.props.scrollY : 0,
+      children: [],
+    };
+    buildChildren(node, host.children);
+    return node;
+  } catch (error) {
+    yoga.freeRecursive();
+    throw error;
+  }
 }
 
 function createTextNode(
@@ -483,6 +491,7 @@ function createTextNode(
   props: Record<string, unknown>,
   wrap: boolean,
 ): void {
+  const style = readTextStyle(props);
   const yoga = Yoga.Node.create();
   const node: BuildNode = {
     kind: "text",
@@ -490,7 +499,7 @@ function createTextNode(
     props,
     text,
     wrap,
-    style: readTextStyle(props),
+    style,
     border: null,
     clip: false,
     scrollX: 0,
@@ -574,6 +583,28 @@ function collect(
       child.props.bg,
       "Box bg",
     );
+    const borderLeft = child.yoga.getComputedBorder(Edge.Left);
+    const borderRight = child.yoga.getComputedBorder(Edge.Right);
+    const borderTop = child.yoga.getComputedBorder(Edge.Top);
+    const borderBottom = child.yoga.getComputedBorder(Edge.Bottom);
+    const paddingLeft = child.yoga.getComputedPadding(Edge.Left);
+    const paddingRight = child.yoga.getComputedPadding(Edge.Right);
+    const paddingTop = child.yoga.getComputedPadding(Edge.Top);
+    const paddingBottom = child.yoga.getComputedPadding(Edge.Bottom);
+    const contentX = Math.round(x + borderLeft + paddingLeft);
+    const contentY = Math.round(y + borderTop + paddingTop);
+    const contentWidth = Math.max(
+      0,
+      Math.round(
+        width - borderLeft - borderRight - paddingLeft - paddingRight,
+      ),
+    );
+    const contentHeight = Math.max(
+      0,
+      Math.round(
+        height - borderTop - borderBottom - paddingTop - paddingBottom,
+      ),
+    );
     const box: LayoutBox = {
       kind: "box",
       x,
@@ -583,6 +614,12 @@ function collect(
       background,
       border: child.border,
       clip: child.clip,
+      content: {
+        x: contentX,
+        y: contentY,
+        width: contentWidth,
+        height: contentHeight,
+      },
       children: [],
     };
     output.push(box);
