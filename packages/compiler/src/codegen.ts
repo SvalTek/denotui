@@ -1,7 +1,7 @@
 /**
  * ComponentIR → TypeScript module codegen.
  *
- * Contract produced (see docs/codegen.md):
+ * Contract produced (see docs/contributing/codegen.md):
  *   - frontmatter imports -> module scope
  *   - remaining frontmatter -> component factory body (runs ONCE per instance)
  *   - template -> a render function returned by the factory

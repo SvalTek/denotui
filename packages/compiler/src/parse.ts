@@ -4,7 +4,7 @@
  * We consume `@astrojs/compiler`'s `parse()` output (never `transform()`), which
  * means this is the only place that touches Astro's node shapes. The Astro v4
  * node types we handle are `root | frontmatter | component | element | text |
- * expression | attribute` (see docs/syntax.md "Compiler expectations").
+ * expression | attribute` (see docs/guide/authoring.md).
  */
 import { parse } from "@astrojs/compiler";
 import type { AttrIR, ComponentIRRoot, FrontmatterIR, NodeIR } from "./ir.ts";

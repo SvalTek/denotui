@@ -1,4 +1,4 @@
-# Compiler
+# Compiler Internals
 
 `@denotui/compiler` turns a `.tui` source into a `.tui.ts` TypeScript module.
 The pipeline has three stages, each in its own file so they can be tested apart:

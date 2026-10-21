@@ -43,11 +43,12 @@ export default component("AgentZoo", (props, ctx) => {
 5. **Core components are auto-imported.** `component`, `h` and `Fragment` are
    always imported from the app barrel `@denotui/deno-tui` (`Fragment` is the
    template root). The fixed core vocabulary (26 bundled names, listed in
-   [`syntax.md`](./syntax.md#template) and exported as `CORE_COMPONENTS`) is
-   imported from the same barrel when referenced — including inside JSX that
-   appears in an expression, e.g. `{items.map((i) => <Text>{i}</Text>)}`. These
-   names are reserved for the framework; any other component (e.g. `Separator`
-   or application components) is imported in frontmatter.
+   [`authoring.md`](../guide/authoring.md#template) and exported as
+   `CORE_COMPONENTS`) is imported from the same barrel when referenced —
+   including inside JSX that appears in an expression, e.g.
+   `{items.map((i) => <Text>{i}</Text>)}`. These names are reserved for the
+   framework; any other component (e.g. `Separator` or application components)
+   is imported in frontmatter.
 6. **String/boolean attribute literals are not wrapped.** Dynamic values are.
    Attribute names that are not valid identifiers (`data-x`) are quoted.
 7. **Output is deterministic.** `generate(ir)` is pure, so `build()` can compare

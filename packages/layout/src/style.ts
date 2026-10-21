@@ -2,7 +2,7 @@
  * Text style props -> terminal style.
  *
  * Only `Text` carries a style in v1; `Box` contributes a background. Style
- * inheritance through boxes is a tracked tradeoff (local/PLAN.md).
+ * inheritance through boxes is a tracked tradeoff (docs/guide/layout-and-styling.md#background-inheritance).
  */
 import type { Color, Style } from "@denotui/terminal";
 import type { BorderPlan, BorderStyle } from "./types.ts";

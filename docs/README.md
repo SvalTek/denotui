@@ -1,52 +1,61 @@
-# denotui — Developer Documentation
+# Documentation
 
-Essential documentation for contributors to the framework itself. This is not a
-user guide; it explains the syntax we accept, what the compiler does with it,
-and the non-obvious constraints we work under.
+This tree is split by audience. The repository root README is the project
+overview; start there for a quick sample.
 
-Read in this order:
+## Guide
 
-1. [`syntax.md`](./syntax.md) — the `.tui` authoring format and its rules.
-2. [`compiler.md`](./compiler.md) — how a `.tui` file becomes a `.tui.ts`
-   module.
-3. [`codegen.md`](./codegen.md) — the exact shape of generated code and why.
-4. [`rendering.md`](./rendering.md) — layout, cells, diffing, screen and input.
-5. [`installer.md`](./installer.md) — the consumer installer and starter
-   template.
-6. [`oddities.md`](./oddities.md) — gotchas, intentional workarounds, and the
-   upstream behaviour we depend on.
+Task-oriented pages for people building apps:
 
-Design-level documents live in `local/` (`PLAN.md`, `ARCHITECTURE.md`) and are
-gitignored; they are the source of truth for the roadmap, not for day-to-day
-authoring rules.
+1. [Installation](./guide/installation.md) — installer, starter template, manual
+   setup, CLI.
+2. [Your first app](./guide/first-app.md) — project files, build and run.
+3. [Authoring](./guide/authoring.md) — frontmatter, templates, expressions,
+   function children.
+4. [Components](./guide/components.md) — catalog, composition,
+   `Map`/`List`/`Select`, controls.
+5. [Reactivity](./guide/reactivity.md) — stores, `$store`, `ctx.use`, effects,
+   frontmatter snapshots.
+6. [Layout and styling](./guide/layout-and-styling.md) — flexbox props, borders,
+   backgrounds, text styles, scroll views.
+7. [Input and focus](./guide/input-and-focus.md) — focus order, key routing,
+   event cancellation.
+8. [Building and deploying](./guide/building.md) — `denotui compile`,
+   `deno task`, `deno compile`, diagnostics.
+9. [AgentZoo walkthrough](./guide/agent-zoo.md) — the example end to end.
 
-## Package layout
+## Reference
 
-```
-packages/compiler  @denotui/compiler    .tui -> IR -> .tui.ts + CLI
-packages/runtime   @denotui/runtime     component model, vnodes, reactivity, app loop
-packages/components @denotui/components bundled UI components (Box, Text, Map, …)
-packages/layout    @denotui/layout      Yoga mapping + text measurement
-packages/terminal  @denotui/terminal    cells, paint, input, screen
-packages/installer @denotui/installer   project installer (`deno x`)
-packages/create    @denotui/create      starter template (`deno create`)
-```
+Exhaustive API and props pages:
 
-The workspace root `mod.ts` is the **application barrel**: it re-exports the
-runtime, components, layout and terminal packages. The compiler is deliberately
-outside it (so app imports never pull Astro/WASM) and is imported directly:
-`import { compile } from "@denotui/compiler";`.
+- [Runtime](./reference/runtime.md) — `createApp`, `Root`, `Ctx`, focus,
+  lifecycle, node tree.
+- [Components](./reference/components.md) — props for every bundled component.
+- [Compiler](./reference/compiler.md) — `compile` API, options, core vocabulary,
+  CLI.
+- [Layout](./reference/layout.md) — Box/Text props, defaults, measurement,
+  clipping.
+- [Terminal](./reference/terminal.md) — `Screen`, `CellBuffer`, diffing,
+  keyboard input.
 
-## Common commands
+## Contributing
 
-```sh
-deno task check           # type-check packages, mod.ts, tests
-deno task test            # run all tests (reads env NODE_ENV only)
-deno task fmt             # format
-deno task lint            # lint
-deno task build:examples  # compile examples/**/*.tui -> *.tui.ts
-deno task example:zoo    # build, then run the AgentZoo example
-```
+Internal design and maintenance notes:
 
-`local/` is excluded from `check` and `test` — the experiment spikes there are
-loosely typed on purpose.
+- [Architecture](./contributing/architecture.md) — end-to-end model.
+- [Compiler internals](./contributing/compiler-internals.md) — parse → IR →
+  codegen, frontmatter splitting.
+- [Generated code](./contributing/codegen.md) — emitted module contract.
+- [Rendering pipeline](./contributing/rendering.md) — layout, cells, diff,
+  screen, input.
+- [Installer internals](./contributing/installer.md) — installer/template design
+  and testing.
+- [Oddities](./contributing/oddities.md) — upstream quirks and intentional
+  workarounds.
+- [Testing](./contributing/testing.md) — commands, permissions, PTY and
+  installer harnesses.
+- [Releasing](./contributing/releasing.md) — publish prep and staging
+  verification.
+
+Design/working documents in `local/` are gitignored and are not part of the
+committed documentation.

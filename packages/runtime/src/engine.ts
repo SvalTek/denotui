@@ -2,7 +2,7 @@
  * The runtime engine: component instances, the persistent node tree,
  * reconciliation and the coalesced frame loop.
  *
- * Model (see docs/architecture notes):
+ * Model (see docs/contributing/architecture.md):
  *  - `factory(props, ctx)` runs ONCE per instance — this is the frontmatter.
  *  - the returned render function runs on mount and whenever the instance is
  *    dirty; its vnode subtree is reconciled against the previous one.
@@ -111,7 +111,7 @@ export class Instance {
    *
    * Subscriptions are released on unmount but not pruned when a read disappears
    * from the render. Accepted v1 tradeoff: an unused subscription costs only a
-   * coalesced re-render. See local/PLAN.md "Known tradeoffs / deferred work".
+   * coalesced re-render. See docs/guide/reactivity.md#subscriptions.
    */
   subscribe(store: StoreLike<unknown>): void {
     if (this.subscriptions.has(store)) return;
